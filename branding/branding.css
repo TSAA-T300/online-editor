@@ -1,0 +1,17 @@
+/*
+ * 編輯器的客製樣式。coolwsd 的每個編輯器頁面都會載入 browser/<版本>/branding.css
+ * （上游 wsd/FileServer.cpp 的 BRANDING），自建版本原本沒有這個檔；Dockerfile 把本檔放進 browser/dist。
+ *
+ * 隱藏會把使用者帶到 Collabora 上游網站的按鈕：使用者應向提供本服務的單位回報問題，而不是到原作者的
+ * issue 追蹤或論壇；封閉網路的環境也連不到外部網站。元素 id 帶流水號（例如 report-an-issue317），改用固定的 class 選取。
+ *   - 「回報問題」：開 github.com/CollaboraOnline/online/issues
+ *   - 「論壇」：開 forum.collaboraonline.com
+ * 分頁式介面（notebookbar）的按鈕與分隔線，以及精簡介面選單的同名項目都一併隱藏。
+ */
+.unoReportIssue,
+.unoForumHelp,
+#help-reportissue-break,
+#menu-report-an-issue,
+#menu-forum {
+  display: none !important;
+}

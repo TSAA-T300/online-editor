@@ -1,0 +1,29 @@
+線上共編文件伺服器（Online Editor）第三方軟體與授權
+======================================================
+
+本映像以下列開放原始碼軟體的原始碼自行編譯，未修改其原始碼。
+完整授權條款與各元件的著作權聲明在映像內的下列檔案，本檔只列總表。
+
+| 元件 | 版本 | 授權 | 映像內的授權檔 |
+|---|---|---|---|
+| 本映像的啟動腳本、樣式與字型設定（https://github.com/TSAA-T300/online-editor） | 與映像版本相同 | MPL-2.0 | /usr/share/doc/online-editor/LICENSE |
+| Collabora Online（coolwsd 與網頁編輯器） | cp-25.04.9-4 | MPL-2.0 | /usr/share/doc/coolwsd/THIRDPARTYLICENSES、collabora-online-sbom.spdx.json |
+| LibreOffice core（Collabora 分支 distro/collabora/co-25.04） | commit e588bf8da9ddb55823b88f5d2461d3935e9ed3fb | MPL-2.0；內含的第三方函式庫、拼字字典、斷字規則、同義詞庫各有授權（MIT、BSD、Apache-2.0、LGPL、GPL 等） | /opt/lokit/LICENSE、/opt/lokit/NOTICE |
+| POCO C++ Libraries（靜態連結） | 1.12.5p2 | BSL-1.0 | /usr/share/doc/coolwsd/THIRDPARTYLICENSES |
+| Ubuntu 24.04 系統套件與字型（含 fonts-noto-cjk、fonts-wqy-*、fonts-droid-fallback） | 見 ubuntu-packages.tsv | 各套件不同（GPL、LGPL、MIT、OFL 等） | /usr/share/doc/<套件>/copyright；套件與版本清單在 /usr/share/doc/online-editor/ubuntu-packages.tsv |
+
+呼叫本服務的系統（WOPI host）與本映像只透過 HTTP（WOPI）溝通，各自是獨立的程式，不受上述授權的 copyleft 條款約束。
+
+商標
+----
+
+「Collabora」「Collabora Online」「Collabora Office」「CODE」是 Collabora Productivity Ltd. 的商標；「LibreOffice」是 The Document Foundation 的商標。本映像不是 Collabora 或 The Document Foundation 的產品，產品名稱改為「Online Editor」，不含 Collabora 的品牌與佈景主題。
+
+Collabora 的原始碼分支附有 Collabora Office 的商業 EULA（訂閱合約），它約束的是向 Collabora 取得的執行檔。本映像由原始碼自行編譯，不適用該合約，因此未收錄該檔。
+
+原始碼取得方式
+--------------
+
+本映像的建置腳本在 https://github.com/TSAA-T300/online-editor（MPL-2.0）。
+本映像所含 MPL、GPL、LGPL 元件的對應原始碼（含編譯用的腳本）是原始碼包「online-editor-source-<映像版本>.tar」，
+隨本映像一併提供，或在上述 repo 對應版本的 Release 取得；兩處都取得不到時，請向提供本映像的單位索取。

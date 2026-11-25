@@ -1,0 +1,5 @@
+# runtime 映像只需要 Dockerfile 與啟動腳本；編譯產物以具名 context「instdir」傳入
+build
+builder
+deliver
+script
