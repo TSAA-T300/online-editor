@@ -11,15 +11,14 @@
 
 ## 原始碼來源
 
-版本鎖定在 `script/versions.sh`，兩者版本必須相同，升版時一起換。
+版本鎖定在 `script/versions.sh`，升版時一起換。26.04 起 online 是 monorepo：engine（LibreOffice core 的 Collabora 版）在 `engine/`，POCO 在 `engine/external/poco`，都隨 online 的 tag 取得。
 
 | 元件 | 版本 | 原始碼位置 | 授權 |
 |---|---|---|---|
-| Collabora Online（coolwsd 與網頁編輯器） | tag `cp-25.04.9-4` | <https://github.com/CollaboraOnline/online/tree/cp-25.04.9-4> | MPL-2.0 |
-| LibreOffice core（engine，Collabora 分支 `distro/collabora/co-25.04`） | commit `e588bf8da9ddb55823b88f5d2461d3935e9ed3fb` | <https://github.com/LibreOffice/core/tree/e588bf8da9ddb55823b88f5d2461d3935e9ed3fb> | MPL-2.0（內含的第三方元件各有授權） |
-| engine 的 git submodule（拼字字典、介面翻譯等） | 依 engine commit 記錄的版本 | <https://github.com/LibreOffice/dictionaries>、<https://github.com/LibreOffice/translations>、<https://github.com/LibreOffice/help> | 各自不同 |
+| Collabora Online（coolwsd、網頁編輯器與 engine） | tag `cp-26.04.6-2` | <https://github.com/CollaboraOnline/online.mirror/tree/cp-26.04.6-2> | MPL-2.0（engine 內含的第三方元件各有授權） |
+| engine 的介面翻譯（含繁中） | `distro/collabora/coc-26.04` 的 commit `3ce4e01250efb782293196f6341a2c8aa405fd71` | <https://gerrit.collaboraoffice.com/translations> | MPL-2.0 |
 | engine 編譯時下載的第三方原始碼 | 依 engine 的 `download.lst` | <https://dev-www.libreoffice.org/src/> | 各自不同 |
-| POCO C++ Libraries（靜態連結進 coolwsd） | 1.12.5p2（`versions.sh` 鎖定 sha256） | <https://pocoproject.org/releases/poco-1.12.5p2/> | BSL-1.0 |
+| POCO C++ Libraries（隨 engine 編譯，靜態連結進 coolwsd） | engine 的 `external/poco` 指定的版本 | 同上（第三方原始碼） | BSL-1.0 |
 | 系統套件與字型 | Ubuntu 24.04（建置當下的版本，清單在映像內 `ubuntu-packages.tsv`） | <http://archive.ubuntu.com/ubuntu/>（`apt-get source`） | 各自不同 |
 
 以上是上游位置；上游分支會停更、搬家或改成需要登入，交付時請用「提供原始碼」的原始碼包，不要只給這些網址。
@@ -42,20 +41,20 @@ Collabora 官方發布的 CODE 執行檔與映像附有商業 EULA（需訂閱�
     - bash、git、curl、sha256sum；Docker 與 buildx（Docker 23 以上）；x86_64；
     - 網路有 TLS 檢查（以自己的 CA 重新簽發憑證）時：含該 CA 的檔案（`HOST_CA_BUNDLE`，預設 `/etc/ssl/certs/ca-certificates.crt`；RHEL 系通常是 `/etc/pki/tls/certs/ca-bundle.crt`；不需要時設 `none`）；
     - 第一次編譯約 40 GB 可用空間（`MIN_FREE_GB`）、至少 8 GB 可用記憶體；平行編譯數依可用記憶體決定（每個工作預留 `GB_PER_JOB`=2 GB，不超過 CPU 核數），避免連結 engine 時記憶體不足；
-    - 連得到 GitHub、pocoproject.org、dev-www.libreoffice.org（engine 的第三方原始碼）、registry.npmjs.org（前端套件）、archive.ubuntu.com（builder 的 apt 套件）。
+    - 連得到 GitHub、gerrit.collaboraoffice.com（engine 的介面翻譯）、dev-www.libreoffice.org（engine 的第三方原始碼）、nodejs.org（編譯前端用的 Node.js，`versions.sh` 鎖定版本與 sha256，不進 runtime 映像）、registry.npmjs.org（前端套件）、archive.ubuntu.com（builder 的 apt 套件）。
 - **資源**：約 40 GB 硬碟。64 核約 1 小時，engine 佔大部分。
-    - 第一次編譯時，engine 還會從 GitHub 抓 git submodule：translations（介面翻譯，含繁中，展開約 2 GB）與 dictionaries（約 440 MB）。下載的是完整 git 歷史，合計約 21 GB，這段時間依網路速度另計（2026-11-25 實測約 30 MB/s 時約 12 分鐘）。
+    - 第一次編譯時另外下載 online（含 engine，約 1.5 GB，GitHub）與介面翻譯（`--depth=1`，gerrit），時間依網路速度另計。
     - `build/` 可用 `BUILD_DIR` 指到別處（例如空間較大的磁碟），各支腳本都會讀它。重跑時沿用編譯結果與 ccache。
 - **產品名稱**：預設 `APP_NAME=Online Editor`、`APP_VENDOR=ITRI`。
 
 ### 升版時的原始碼來源
 
-2026-11-25 查證：
+2026-11-26 查證：
 
-- online：26.04 起 `CollaboraOnline/online` 不再有新版本，改從 GitHub 的 [`CollaboraOnline/online.mirror`](https://github.com/CollaboraOnline/online.mirror) 取（`cp-26.04.6-2` 的 tag 與 commit hash 與 `gerrit.collaboraoffice.com/online` 一致）。
-- engine：GitHub 與 git.libreoffice.org 的 `distro/collabora/co-25.04`、`co-26.04` 停在 2026 年 4 月；之後的版本（例如 tag `cp-25.04.15-3`、新分支 `distro/collabora/coc-26.04`）只在 `gerrit.collaboraoffice.com/core`。目前鎖定的 commit 是 GitHub 上能取得的最後一版。
-- 有 TLS 檢查的網路以 git clone gerrit 可能被中斷（`git ls-remote` 仍可用）。
-- mirror 可能比 gerrit 晚同步，升版前用 `git ls-remote` 比對兩邊的 tag。
+- online：`CollaboraOnline/online` 沒有 26.04 的 tag，從 GitHub 的 [`CollaboraOnline/online.mirror`](https://github.com/CollaboraOnline/online.mirror) 取（`cp-26.04.6-2` 的 tag 與 commit hash 與 `gerrit.collaboraoffice.com/online` 一致）。mirror 可能比 gerrit 晚同步，升版前用 `git ls-remote` 比對兩邊的 tag。
+- engine：26.04 起在 online 的 `engine/`，不必另外取得。25.04 以前的 engine 在另一個 repo（`gerrit.collaboraoffice.com/core`，GitHub 與 git.libreoffice.org 的 Collabora 分支停在 2026 年 4 月）。
+- 介面翻譯：只在 `gerrit.collaboraoffice.com/translations`，分支 `distro/collabora/coc-26.04` 會持續前進，鎖定 online tag 日期之前的最後一個 commit。
+- 從 gerrit 取原始碼不要加 `git -q`：gerrit 打包期間沒有任何輸出，有 TLS 檢查的網路可能把閒置的連線切斷（2026-11-26 院內實測約 245 秒後中斷）；有進度輸出時連線持續有資料，不會被切。
 - 升版後更新本 README「原始碼來源」與 `third_party_licenses.txt` 的版本，並確認「授權與商標」的檢查項目。
 
 ## 執行
@@ -79,6 +78,7 @@ online-editor ─(WOPI：CheckFileInfo、GetFile、PutFile)─► 你的系統�
 
 - `start-collabora-online.sh` 一律關閉管理介面，並把 `net.post_allow`、`net.lok_allow` 收窄到 loopback：不開放 convert-to 等 REST 端點，文件內的外部資料（`=WEBSERVICE()`、外部參照）也不能連到容器網路內的服務。建議反向代理另外封鎖 `<SERVICE_ROOT>/(cool|lool)/` 底下的 `convert-to`、`render-search-result`、`extract-link-targets`、`extract-document-structure`、`transform-document-structure`、`get-thumbnail`、`getMetrics`、`adminws`，因為 coolwsd 會放行 Host 是 WOPI host 的請求，而 Host 可以偽造。
 - 容器沒有 `CAP_SYS_ADMIN` 時，coolwsd 會記錄 `Bind-Mounting fails` 並改用複製檔案，功能正常，只是開檔稍慢。
+- 26.04 啟動時會記錄 `alias_groups: ignoring <host> [true] of group #1`：coolwsd 列舉群組內的 host 時，把 `start-collabora-online.sh` 設的 `host[@allow]=true` 屬性誤當成另一個 host；`WOPI_HOST` 仍以 allow=true 生效（上游 `wsd/HostUtil.cpp`），可以忽略。
 - 以數字 UID 1001 執行，相容 k8s Pod Security。WOPI proof key 由各容器啟動時自行產生。
 - 中文字型用 Ubuntu 的 `fonts-noto-cjk`，繁中 Windows 字型（微軟正黑體、新細明體等）對應到它（`fonts/99-zh-tw-aliases.conf`）。版面與原文件的差異主要來自字型；商用字型不可隨映像散布。
 
@@ -98,6 +98,7 @@ online-editor ─(WOPI：CheckFileInfo、GetFile、PutFile)─► 你的系統�
     - 編輯器畫面上的產品名稱沒設定時，會顯示「Collabora Online Development Edition (unbranded)」，連結指向 Collabora 官網。`start-collabora-online.sh` 一律帶入 `user_interface.brandProductName`、`brandProductURL`；
     - engine 的產品名稱與廠商（關於對話框的 LOKit 版本，以及存回文件 `docProps/app.xml` 的產生者）原本是 `Collabora Office`／`Collabora`，`Dockerfile` 改寫 `main.xcd`、`versionrc`、`bootstraprc`，換成 `Online Editor`／`ITRI`；
     - 品牌與佈景主題在 Collabora 的私有 repo，自建版本不含；
+    - 26.04 新增的新手導覽（每個使用者在每種文件類型第一次開啟時跳出，也可從「說明」再打開）標題寫死「Welcome to Collabora Online」，不套用 `brandProductName`。`Dockerfile` 把 `bundle.js` 與各語言翻譯檔中這個字串的「Collabora Online／Office」換成「Online Editor」，還有殘留時建置失敗。導覽本身保留；整合方無法用 `ui_defaults` 關掉它（coolwsd 只接受 `Ruler`、`Sidebar` 等白名單的鍵）；
     - 編輯器「說明」分頁原本有連到 Collabora 上游的「回報問題」與「論壇」，以 `branding/branding.css` 隱藏。coolwsd 的每個編輯器頁面都會載入 `browser/<版本>/branding.css`，Dockerfile 把它放進 `browser/dist`；coolwsd 啟動時才讀取這個目錄，改了要重建映像。
     - 腳本內部的檔名與路徑（例如 `start-collabora-online.sh`、`/opt/cool`、coolwsd 的設定鍵）沿用上游的技術名稱，不是對外的產品名稱。
 
@@ -106,11 +107,11 @@ online-editor ─(WOPI：CheckFileInfo、GetFile、PutFile)─► 你的系統�
 把映像交給他人（`docker save` 給客戶、推上公開或私有 registry）就是散布，MPL 與 GPL、LGPL 要求讓收到的人取得對應原始碼。只給上游網址不夠可靠（見「升版時的原始碼來源」），所以每個映像版本都產生一份原始碼包：
 
 1. 依「建置」的步驟 1、2 建好映像後，在同一個 `BUILD_DIR` 執行 `bash script/build-source-package.sh`，產出 `online-editor-source-<映像版本>.tar`。
-    - 內容：本 repo 的建置腳本、online 與 engine 原始碼、engine 編譯時取得的 submodule 與第三方原始碼、POCO、映像內 Ubuntu 套件的原始碼、授權檔與 `SHA256SUMS`，說明在包內的 `README.txt`。
+    - 內容：本 repo 的建置腳本、online 原始碼（含 engine 與 POCO）、engine 的介面翻譯與編譯時下載的第三方原始碼、映像內 Ubuntu 套件的原始碼、授權檔與 `SHA256SUMS`，說明在包內的 `README.txt`。
     - 全部取自這次編譯實際使用的檔案，不重新向上游下載；Ubuntu 套件依映像內的 `ubuntu-packages.tsv` 下載同版本的原始碼：archive 只保留最新版，取不到的改向 Launchpad 取（保留所有發佈過的版本，連線走 https，網路有 TLS 檢查時同樣用 `HOST_CA_BUNDLE`）；兩處都取不到時腳本會停止並列出套件。
     - repo 有未 commit 的修改時腳本會停止：包內的建置腳本取自 HEAD，要和建置映像時一致。
 2. 交付映像 tar 時，把原始碼包放在一起交付；發佈到 registry 時，把原始碼包放在收到的人取得得到的位置（例如本 repo 對應版本的 GitHub Release）。
     - 25.04.9.4-2 實測約 4.2 GB（engine 第三方原始碼 2.0 GB、Ubuntu 套件原始碼 1.4 GB、translations 370 MB、engine 340 MB），產生約 10 分鐘。
-    - GitHub Release 單一附件上限 2 GB：整包 tar 傳不上去，改上傳包內的各個檔案（`core-external-tarballs/`、`ubuntu-sources/` 可各自再打成 tar，兩者都小於 2 GB），並附上 `SHA256SUMS`、`README.txt`。
+    - GitHub Release 單一附件上限 2 GB：整包 tar 傳不上去，改上傳包內的各個檔案（`engine-external-tarballs/`、`ubuntu-sources/` 各自打成 tar，超過 2 GB 時依大小拆成多份），並附上 `SHA256SUMS`、`README.txt`。
 3. 至少保存到該映像版本不再提供給任何人之後三年。
 4. 映像內的 `/usr/share/doc/online-editor/third_party_licenses.txt` 寫明原始碼包的取得方式。

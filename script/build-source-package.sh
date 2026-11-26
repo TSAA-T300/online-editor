@@ -19,18 +19,16 @@ IMAGE_NAME="${IMAGE_NAME:-$(bash script/get-image-name.sh)}"
 NAME="online-editor-source-${IMAGE_NAME##*:}"
 OUT_DIR="${OUT_DIR:-${BUILD_DIR}/source-package}"
 STAGE="${OUT_DIR}/${NAME}"
-POCO_TARBALL="poco-${POCO_VERSION}-all.tar.gz"
+ENGINE_DIR="${BUILD_DIR}/online/engine"
 
 # ---------- 確認 BUILD_DIR 與映像是這次要交付的版本 ----------
 errors=()
-[ "$(git -C "${BUILD_DIR}/core" rev-parse -q --verify HEAD 2>/dev/null)" = "${CORE_COMMIT}" ] \
-  || errors+=("${BUILD_DIR}/core 不是 ${CORE_COMMIT}，請先執行 script/build-from-source.sh")
 [ "$(git -C "${BUILD_DIR}/online" describe --tags --exact-match 2>/dev/null)" = "${ONLINE_TAG}" ] \
   || errors+=("${BUILD_DIR}/online 不是 ${ONLINE_TAG}，請先執行 script/build-from-source.sh")
-(cd "${BUILD_DIR}" && echo "${POCO_SHA256}  ${POCO_TARBALL}" | sha256sum -c --status -) 2>/dev/null \
-  || errors+=("${BUILD_DIR}/${POCO_TARBALL} 不存在或 sha256 不符")
+[ "$(git -C "${ENGINE_DIR}/translations" rev-parse -q --verify HEAD 2>/dev/null)" = "${TRANSLATIONS_COMMIT}" ] \
+  || errors+=("${ENGINE_DIR}/translations 不是 ${TRANSLATIONS_COMMIT}，請先執行 script/build-from-source.sh")
 # config_host.mk 記的是 builder 容器內的路徑（BUILD_DIR 掛在 /build），換回 host 的路徑
-TARFILE_LOCATION=$(sed -n 's/^export TARFILE_LOCATION=//p' "${BUILD_DIR}/core/config_host.mk" 2>/dev/null)
+TARFILE_LOCATION=$(sed -n 's/^export TARFILE_LOCATION=//p' "${ENGINE_DIR}/config_host.mk" 2>/dev/null)
 TARFILE_LOCATION="${TARFILE_LOCATION/#\/build/${BUILD_DIR}}"
 [ -n "${TARFILE_LOCATION}" ] && [ -n "$(ls -A "${TARFILE_LOCATION}" 2>/dev/null)" ] \
   || errors+=("找不到 engine 下載的第三方原始碼（config_host.mk 的 TARFILE_LOCATION），請先完成編譯")
@@ -52,31 +50,18 @@ COMPONENT_PATH=$(git -C "${PRJ_DIR}" rev-parse --show-prefix)
 git -C "$(git -C "${PRJ_DIR}" rev-parse --show-toplevel)" archive --format=tar.gz --prefix=build-scripts/ \
   -o "${STAGE}/build-scripts.tar.gz" "HEAD:${COMPONENT_PATH%/}"
 
-echo "== online ${ONLINE_TAG}"
+echo "== online ${ONLINE_TAG}（內含 engine 與 POCO）"
 git -C "${BUILD_DIR}/online" archive --format=tar.gz --prefix=online/ \
   -o "${STAGE}/online-${ONLINE_TAG}.tar.gz" HEAD
 
-echo "== engine ${CORE_COMMIT:0:10} 與編譯時取得的 submodule"
-git -C "${BUILD_DIR}/core" archive --format=tar.gz --prefix=core/ \
-  -o "${STAGE}/core-${CORE_COMMIT:0:10}.tar.gz" HEAD
-# submodule 只收錄編譯時有取得的（例如 dictionaries、translations），沒取得的表示這次編譯沒有用到
-git -C "${BUILD_DIR}/core" submodule status | while read -r sha path _; do
-  if [ "${sha:0:1}" = "-" ]; then
-    echo "   ${path}：編譯時未取得（未使用），不收錄"
-    continue
-  fi
-  echo "   ${path} ${sha:0:10}"
-  git -C "${BUILD_DIR}/core/${path}" archive --format=tar.gz --prefix="core/${path}/" \
-    -o "${STAGE}/core-submodule-${path}.tar.gz" HEAD
-done
+echo "== engine 的介面翻譯 ${TRANSLATIONS_COMMIT:0:10}"
+git -C "${ENGINE_DIR}/translations" archive --format=tar.gz --prefix=online/engine/translations/ \
+  -o "${STAGE}/translations-${TRANSLATIONS_COMMIT:0:10}.tar.gz" HEAD
 
 echo "== engine 編譯時下載的第三方原始碼（${TARFILE_LOCATION}）"
-mkdir -p "${STAGE}/core-external-tarballs"
-find "${TARFILE_LOCATION}" -maxdepth 1 -type f ! -name '*.part' -exec cp -p {} "${STAGE}/core-external-tarballs/" \;
-echo "   $(ls "${STAGE}/core-external-tarballs" | wc -l) 個檔案"
-
-echo "== POCO ${POCO_VERSION}"
-cp -p "${BUILD_DIR}/${POCO_TARBALL}" "${STAGE}/"
+mkdir -p "${STAGE}/engine-external-tarballs"
+find "${TARFILE_LOCATION}" -maxdepth 1 -type f ! -name '*.part' -exec cp -p {} "${STAGE}/engine-external-tarballs/" \;
+echo "   $(ls "${STAGE}/engine-external-tarballs" | wc -l) 個檔案"
 
 echo "== 授權檔（取自映像 ${IMAGE_NAME}）"
 for f in /usr/share/doc/online-editor/third_party_licenses.txt /usr/share/doc/online-editor/ubuntu-packages.tsv \
@@ -136,17 +121,15 @@ cat > "${STAGE}/README.txt" <<EOF
 | 檔案 | 內容 |
 |---|---|
 | build-scripts.tar.gz | 編譯與打包映像的腳本（script/build-from-source.sh、builder/、Dockerfile 等），說明見其中的 README.md |
-| online-${ONLINE_TAG}.tar.gz | Collabora Online（${ONLINE_REPO} 的 tag ${ONLINE_TAG}） |
-| core-${CORE_COMMIT:0:10}.tar.gz | LibreOffice core（${CORE_REPO} 的 commit ${CORE_COMMIT}） |
-| core-submodule-*.tar.gz | core 編譯時取得的 git submodule（拼字字典、介面翻譯等），解開後位於 core/ 下對應目錄 |
-| core-external-tarballs/ | core 編譯時下載的第三方原始碼，編譯時放在 core 的 TARFILE_LOCATION 即不必連網下載 |
-| ${POCO_TARBALL} | POCO C++ Libraries ${POCO_VERSION}（靜態連結進 coolwsd） |
+| online-${ONLINE_TAG}.tar.gz | Collabora Online（${ONLINE_REPO} 的 tag ${ONLINE_TAG}）；engine（LibreOffice core 的 Collabora 版）在 online/engine，POCO 在 online/engine/external/poco |
+| translations-${TRANSLATIONS_COMMIT:0:10}.tar.gz | engine 的介面翻譯（${TRANSLATIONS_REPO} 的 commit ${TRANSLATIONS_COMMIT}），解開後位於 online/engine/translations |
+| engine-external-tarballs/ | engine 編譯時下載的第三方原始碼，編譯時放在 engine 的 TARFILE_LOCATION 即不必連網下載 |
 | ubuntu-sources/ | 映像內 Ubuntu 24.04 系統套件的原始碼（apt-get source 格式；清單見 requested.txt） |
 | licenses/ | 映像內的授權檔與 Ubuntu 套件清單 |
 | SHA256SUMS | 以上檔案的 sha256 |
 
 編譯方式：依 build-scripts 的 README.md「建置」，script/build-from-source.sh 會在 builder 容器內
-以上述原始碼編譯 engine（core）與 online，script/build-docker-image.sh 再打包成映像；
+以上述原始碼編譯 engine 與 online，script/build-docker-image.sh 再打包成映像；
 產品名稱的替換與 EULA 的移除在 Dockerfile。
 EOF
 

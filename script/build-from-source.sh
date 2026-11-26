@@ -47,7 +47,7 @@ preflight() {
 
   mkdir -p "${BUILD_DIR}"
   free_gb=$(df -Pk "${BUILD_DIR}" | awk 'NR==2 {print int($4 / 1048576)}')
-  if [ ! -d "${BUILD_DIR}/core/instdir" ] && [ "${free_gb}" -lt "${MIN_FREE_GB}" ]; then
+  if [ ! -d "${BUILD_DIR}/online/engine/instdir" ] && [ "${free_gb}" -lt "${MIN_FREE_GB}" ]; then
     errors+=("${BUILD_DIR} 所在磁碟只剩 ${free_gb} GB，第一次編譯需要約 ${MIN_FREE_GB} GB；可用 BUILD_DIR 指到較大的磁碟")
   fi
 
@@ -59,9 +59,9 @@ preflight() {
     errors+=("可用記憶體只有 ${avail_gb} GB，至少需要 ${MIN_MEM_GB} GB（連結 engine 時用量最大）")
   fi
 
-  # 編譯過程會連到的來源：原始碼（GitHub）、POCO、engine 的第三方原始碼（LibreOffice）、
-  # 前端套件（npm）、builder 映像的 apt 套件（Ubuntu）
-  for url in https://github.com https://pocoproject.org https://dev-www.libreoffice.org \
+  # 編譯過程會連到的來源：原始碼（GitHub）、翻譯（gerrit.collaboraoffice.com）、engine 的第三方原始碼（LibreOffice）、
+  # Node.js、前端套件（npm）、builder 映像的 apt 套件（Ubuntu）
+  for url in https://github.com https://gerrit.collaboraoffice.com https://dev-www.libreoffice.org https://nodejs.org \
     https://registry.npmjs.org http://archive.ubuntu.com/ubuntu/; do
     local ca_opt=()
     [ "${HOST_CA_BUNDLE}" != "none" ] && [ -f "${HOST_CA_BUNDLE}" ] && ca_opt=(--cacert "${HOST_CA_BUNDLE}")
@@ -86,26 +86,30 @@ fi
 mkdir -p "${BUILD_DIR}"
 cd "${BUILD_DIR}"
 
-echo "== 取得原始碼（engine ${CORE_COMMIT:0:10}、online ${ONLINE_TAG}）"
-if test ! -d core/.git ; then
-  git init -q core
-  git -C core remote add origin "${CORE_REPO}"
-fi
-if [ "$(git -C core rev-parse -q --verify HEAD || true)" != "${CORE_COMMIT}" ]; then
-  git -C core fetch -q --depth=1 origin "${CORE_COMMIT}"
-  git -C core checkout -q --force FETCH_HEAD
-fi
+echo "== 取得原始碼（online ${ONLINE_TAG}，內含 engine；翻譯 ${TRANSLATIONS_COMMIT:0:10}）"
 if test ! -d online/.git ; then
   git clone -q --depth=1 --branch "${ONLINE_TAG}" "${ONLINE_REPO}" online
 fi
 test "$(git -C online describe --tags --exact-match)" = "${ONLINE_TAG}" || {
   echo "online 不是 ${ONLINE_TAG}，請刪除 ${BUILD_DIR}/online 後重跑"; exit 1; }
-
-POCO_TARBALL="poco-${POCO_VERSION}-all.tar.gz"
-if test ! -f "${POCO_TARBALL}" ; then
-  curl -sSfLO "https://pocoproject.org/releases/poco-${POCO_VERSION}/${POCO_TARBALL}"
+# engine 的介面翻譯（--with-lang 需要 engine/translations；沒有時 engine 的對話框只有英文）。
+# 不加 -q：gerrit 打包期間沒有輸出時，有 TLS 檢查的網路可能把閒置的連線切斷（院內約 245 秒），
+# 進度輸出讓連線持續有資料。
+T=online/engine/translations
+if test ! -d "$T/.git" ; then
+  git init -q "$T"
+  git -C "$T" remote add origin "${TRANSLATIONS_REPO}"
 fi
-echo "${POCO_SHA256}  ${POCO_TARBALL}" | sha256sum -c -
+if [ "$(git -C "$T" rev-parse -q --verify HEAD || true)" != "${TRANSLATIONS_COMMIT}" ]; then
+  git -C "$T" fetch --progress --depth=1 origin "${TRANSLATIONS_COMMIT}"
+  git -C "$T" checkout -q --force FETCH_HEAD
+fi
+
+NODE_TARBALL="node-v${NODE_VERSION}-linux-x64.tar.xz"
+if test ! -f "${NODE_TARBALL}" ; then
+  curl -sSfLO "https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TARBALL}"
+fi
+echo "${NODE_SHA256}  ${NODE_TARBALL}" | sha256sum -c -
 
 echo "== 建立編譯環境 ${BUILDER_IMAGE}"
 # 不加 --network=host：開發機 host 網路的 build 連不到套件來源
@@ -120,7 +124,7 @@ echo "== 編譯（平行 ${BUILD_JOBS} 個；log：${BUILD_DIR}/build.log）"
 # PARALLELISM 覆寫 engine 在 autogen 時記下的平行數（config_host.mk 的 PARALLELISM?=）
 docker run --rm --user "$(id -u):$(id -g)" "${CA_MOUNT[@]}" \
   -v "${BUILD_DIR}:/build" -v "${PRJ_DIR}/builder/build-in-container.sh:/build-in-container.sh:ro" \
-  -e POCO_VERSION="${POCO_VERSION}" -e APP_NAME="${APP_NAME}" -e APP_VENDOR="${APP_VENDOR}" \
+  -e APP_NAME="${APP_NAME}" -e APP_VENDOR="${APP_VENDOR}" -e NODE_VERSION="${NODE_VERSION}" \
   -e BUILD_JOBS="${BUILD_JOBS}" -e PARALLELISM="${BUILD_JOBS}" \
   "${BUILDER_IMAGE}" bash /build-in-container.sh 2>&1 | tee "${BUILD_DIR}/build.log"
 
