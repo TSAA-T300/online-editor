@@ -7,7 +7,7 @@
 | 元件 | 版本 | 授權 | 映像內的授權檔 |
 |---|---|---|---|
 | 本映像的啟動腳本、樣式與字型設定（https://github.com/TSAA-T300/online-editor） | 與映像版本相同 | MPL-2.0 | /usr/share/doc/online-editor/LICENSE |
-| Collabora Online（coolwsd 與網頁編輯器） | cp-26.04.6-2 | MPL-2.0 | /usr/share/doc/coolwsd/THIRDPARTYLICENSES、collabora-online-sbom.spdx.json |
+| Collabora Online（coolwsd 與網頁編輯器） | cp-26.04.6-2 | MPL-2.0 | /usr/share/doc/coolwsd/THIRDPARTYLICENSES、/usr/share/coolwsd/collabora-online-sbom.spdx.json |
 | engine（LibreOffice core 的 Collabora 版，Collabora Online cp-26.04.6-2 的 engine/）與介面翻譯（distro/collabora/coc-26.04 的 commit 3ce4e01250efb782293196f6341a2c8aa405fd71） | 26.04.6.2 | MPL-2.0；內含的第三方函式庫、拼字字典、斷字規則、同義詞庫各有授權（MIT、BSD、Apache-2.0、LGPL、GPL 等） | /opt/lokit/LICENSE、/opt/lokit/NOTICE |
 | POCO C++ Libraries（隨 engine 編譯，靜態連結） | 1.15.4 | BSL-1.0 | /usr/share/doc/coolwsd/THIRDPARTYLICENSES |
 | Ubuntu 24.04 系統套件與字型（含 fonts-noto-cjk、fonts-wqy-*、fonts-droid-fallback） | 見 ubuntu-packages.tsv | 各套件不同（GPL、LGPL、MIT、OFL 等） | /usr/share/doc/<套件>/copyright；套件與版本清單在 /usr/share/doc/online-editor/ubuntu-packages.tsv |

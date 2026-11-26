@@ -66,7 +66,7 @@ echo "   $(ls "${STAGE}/engine-external-tarballs" | wc -l) 個檔案"
 echo "== 授權檔（取自映像 ${IMAGE_NAME}）"
 for f in /usr/share/doc/online-editor/third_party_licenses.txt /usr/share/doc/online-editor/ubuntu-packages.tsv \
   /opt/lokit/LICENSE /opt/lokit/NOTICE /usr/share/doc/coolwsd/THIRDPARTYLICENSES \
-  /usr/share/doc/coolwsd/collabora-online-sbom.spdx.json; do
+  /usr/share/coolwsd/collabora-online-sbom.spdx.json; do
   docker run --rm --entrypoint cat "${IMAGE_NAME}" "${f}" > "${STAGE}/licenses/$(basename "${f}")"
 done
 
