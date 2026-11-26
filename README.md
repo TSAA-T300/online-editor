@@ -80,7 +80,7 @@ online-editor ─(WOPI：CheckFileInfo、GetFile、PutFile)─► 你的系統�
 - 容器沒有 `CAP_SYS_ADMIN` 時，coolwsd 會記錄 `Bind-Mounting fails` 並改用複製檔案，功能正常，只是開檔稍慢。
 - 26.04 啟動時會記錄 `alias_groups: ignoring <host> [true] of group #1`：coolwsd 列舉群組內的 host 時，把 `start-collabora-online.sh` 設的 `host[@allow]=true` 屬性誤當成另一個 host；`WOPI_HOST` 仍以 allow=true 生效（上游 `wsd/HostUtil.cpp`），可以忽略。
 - 以數字 UID 1001 執行，相容 k8s Pod Security。WOPI proof key 由各容器啟動時自行產生。
-- 中文字型用 Ubuntu 的 `fonts-noto-cjk`，繁中 Windows 字型（微軟正黑體、新細明體等）對應到它（`fonts/99-zh-tw-aliases.conf`）。版面與原文件的差異主要來自字型；商用字型不可隨映像散布。
+- 中文字型用 Ubuntu 的 `fonts-noto-cjk`，繁中 Windows 字型（微軟正黑體、新細明體、標楷體等）與韓文 Windows 字型（Gungsuh、Batang、Gulim 等，台灣的文件也會拿來寫中文）對應到它的繁中版本（`fonts/99-zh-tw-aliases.conf`）；沒有對應的字型會落到只有拉丁字的 DejaVu Sans，部分中文字顯示成方框。版面與原文件的差異主要來自字型；商用字型不可隨映像散布。
 
 ## 授權與商標
 
