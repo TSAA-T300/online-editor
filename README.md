@@ -99,7 +99,8 @@ online-editor ─(WOPI：CheckFileInfo、GetFile、PutFile)─► 你的系統�
     - 編輯器畫面上的產品名稱沒設定時，會顯示「Collabora Online Development Edition (unbranded)」，連結指向 Collabora 官網。`start-collabora-online.sh` 一律帶入 `user_interface.brandProductName`、`brandProductURL`；
     - engine 的產品名稱與廠商（關於對話框的 LOKit 版本，以及存回文件 `docProps/app.xml` 的產生者）原本是 `Collabora Office`／`Collabora`，`Dockerfile` 改寫 `main.xcd`、`versionrc`、`bootstraprc`，換成 `Online Editor`／`ITRI`；
     - 品牌與佈景主題在 Collabora 的私有 repo，自建版本不含；
-    - 26.04 新增的新手導覽（每個使用者在每種文件類型第一次開啟時跳出，也可從「說明」再打開）標題寫死「Welcome to Collabora Online」，不套用 `brandProductName`。`Dockerfile` 把 `bundle.js` 與各語言翻譯檔中這個字串的「Collabora Online／Office」換成「Online Editor」，還有殘留時建置失敗。導覽本身保留；整合方無法用 `ui_defaults` 關掉它（coolwsd 只接受 `Ruler`、`Sidebar` 等白名單的鍵）；
+    - 26.04 新增的新手導覽（每個使用者在每種文件類型第一次開啟時跳出，也可從「說明」再打開）標題寫死「Welcome to Collabora Online」，不套用 `brandProductName`。`Dockerfile` 把 `bundle.js` 與各語言翻譯檔中這個字串的「Collabora Online／Office」換成「Online Editor」，還有殘留時建置失敗。導覽大部分沒有繁中翻譯，而且整合方無法用 `ui_defaults` 關掉它（coolwsd 只接受 `Ruler`、`Sidebar` 等白名單的鍵），所以 `branding/patch-bundle.pl` 讓它一律視為已看過、不自動跳出；仍可從「說明」手動打開；
+    - 關於對話框：版本旁的 git hash 原本連到 Collabora 的 gerrit，`branding/patch-bundle.pl` 改連本 repo 的 Release（映像的建置腳本與對應原始碼），顯示的 hash 仍是上游 online 的 commit。著作權原本是「Copyright © 年, ITRI.」，讀起來像整個程式屬於 ITRI，改成「Copyright © 年, ITRI (modifications). Based on Collabora Online and LibreOffice, © their respective contributors.」；
     - 編輯器「說明」分頁原本有連到 Collabora 上游的「回報問題」與「論壇」，以 `branding/branding.css` 隱藏。coolwsd 的每個編輯器頁面都會載入 `browser/<版本>/branding.css`，Dockerfile 把它放進 `browser/dist`；coolwsd 啟動時才讀取這個目錄，改了要重建映像。
     - 腳本內部的檔名與路徑（例如 `start-collabora-online.sh`、`/opt/cool`、coolwsd 的設定鍵）沿用上游的技術名稱，不是對外的產品名稱。
 

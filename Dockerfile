@@ -41,6 +41,10 @@ RUN cd /usr/share/coolwsd/browser/dist && \
     sed -i -E 's#"Welcome to Collabora Online": "([^"]*)Collabora (Online|Office)([^"]*)"#"Welcome to Online Editor": "\1Online Editor\3"#' l10n/ui-*.json && \
     ! grep -rqF "Welcome to Collabora Online" . && \
     grep -qF '"Welcome to Online Editor"' bundle.js
+# 關於對話框的 git hash 改連本 repo 的 Release、著作權寫明 ITRI 只有修改部分，新手導覽不自動跳出（大部分沒有繁中翻譯）。
+# 每一項都要剛好找到一處，否則建置失敗（見腳本內的說明）
+COPY branding/patch-bundle.pl /tmp/patch-bundle.pl
+RUN perl /tmp/patch-bundle.pl /usr/share/coolwsd/browser/dist/bundle.js && rm /tmp/patch-bundle.pl
 
 # engine 的產品名稱與廠商不用 Collabora 商標：顯示在關於對話框的 LOKit 版本、engine 對話框，
 # 也會寫進存回文件的產生者欄位（docProps/app.xml）。只改設定檔，不必重編 engine。
