@@ -10,6 +10,8 @@
 #   BRAND_PRODUCT_NAME 編輯器顯示的產品名稱（關於對話框、載入畫面、錯誤訊息；預設 Online Editor）。
 #                   沒設時 coolwsd 會顯示 Collabora 的名稱
 #   BRAND_PRODUCT_URL  關於對話框產品名稱的連結（預設 /，即同一網站的首頁）；沒設時會連到 Collabora 官網
+#   STATUSBAR_SAVE_INDICATOR 狀態列是否顯示「最後儲存於」（預設 false）。時間取自 WOPI CheckFileInfo 的
+#                   LastModifiedTime；WOPI host 為了避免共編衝突回舊時間時（例如 IKM），這個顯示會一直不準
 #   extra_params    其他 coolwsd --o: 參數，原樣附加
 #
 # TLS 由前面的反向代理終止，coolwsd 本身走 http。
@@ -19,6 +21,7 @@ SSL_TERMINATION="${SSL_TERMINATION:-true}"
 LOG_LEVEL="${LOG_LEVEL:-warning}"
 BRAND_PRODUCT_NAME="${BRAND_PRODUCT_NAME:-Online Editor}"
 BRAND_PRODUCT_URL="${BRAND_PRODUCT_URL:-/}"
+STATUSBAR_SAVE_INDICATOR="${STATUSBAR_SAVE_INDICATOR:-false}"
 
 wopi_params=""
 if [ -n "${WOPI_HOST}" ]; then
@@ -27,16 +30,8 @@ if [ -n "${WOPI_HOST}" ]; then
  --o:storage.wopi.alias_groups.group[0].host[@allow]=true"
 fi
 
-# 不讓文件伺服器替外部做事：
-# - post_allow：預設允許私有網段呼叫 convert-to 等 REST 端點。經反向代理（nginx、k8s Ingress）轉送時來源都是私有 IP，
-#   等於不用登入就能用。WOPI 編輯用不到這些端點，只留 loopback（條目 2～4）；空字串的條目 coolwsd 會略過
-# - lok_allow：文件內的外部資料（=WEBSERVICE()、外部參照、插入網址圖片）可連的主機，預設也是私有網段，
-#   會讓 coolwsd 替文件對容器網路內的服務發請求；同樣只留 loopback 與 localhost
-# 條目順序依 coolwsd.xml（25.04）：0、1 是 192.168，5～10 是 172.16/12，11、12 是 10/8
-deny_params=""
-for i in 0 1 5 6 7 8 9 10 11 12; do
-  deny_params="${deny_params} --o:net.post_allow.host[${i}]= --o:net.lok_allow.host[${i}]="
-done
+# 不讓文件伺服器替外部做事（post_allow 只留 loopback、lok_allow 不允許其他主機）已在建置映像時寫進
+# /etc/coolwsd/coolwsd.xml（見 Dockerfile），不在這裡依條目編號覆寫：條目的格式與順序隨版本改變，編號會清錯
 
 # OpenShift／k8s 可能指定任意 UID，coolwsd 需要名為 cool 的使用者，以 nss_wrapper 對應
 user_id=$(id -u)
@@ -60,4 +55,5 @@ exec /usr/bin/coolwsd --version --use-env-vars \
   --o:stop_on_config_change=true \
   --o:per_document.always_save_on_exit=true \
   --o:admin_console.enable=false \
-  ${deny_params} ${wopi_params} ${extra_params} "$@"
+  --o:user_interface.statusbar_save_indicator="${STATUSBAR_SAVE_INDICATOR}" \
+  ${wopi_params} ${extra_params} "$@"

@@ -74,9 +74,10 @@ online-editor ─(WOPI：CheckFileInfo、GetFile、PutFile)─► 你的系統�
 | `LOG_LEVEL` | `warning` | coolwsd log 等級 |
 | `BRAND_PRODUCT_NAME` | `Online Editor` | 編輯器畫面上的產品名稱（關於對話框、載入畫面、錯誤訊息） |
 | `BRAND_PRODUCT_URL` | `/` | 產品名稱的連結 |
+| `STATUSBAR_SAVE_INDICATOR` | `false` | 狀態列是否顯示「最後儲存於」。時間取自 WOPI CheckFileInfo 的 `LastModifiedTime`；WOPI host 為了避免共編衝突回舊時間時，這個顯示會一直不準 |
 | `extra_params` | （空） | 其他 `--o:` 參數 |
 
-- `start-collabora-online.sh` 一律關閉管理介面，並把 `net.post_allow`、`net.lok_allow` 收窄到 loopback：不開放 convert-to 等 REST 端點，文件內的外部資料（`=WEBSERVICE()`、外部參照）也不能連到容器網路內的服務。建議反向代理另外封鎖 `<SERVICE_ROOT>/(cool|lool)/` 底下的 `convert-to`、`render-search-result`、`extract-link-targets`、`extract-document-structure`、`transform-document-structure`、`get-thumbnail`、`getMetrics`、`adminws`，因為 coolwsd 會放行 Host 是 WOPI host 的請求，而 Host 可以偽造。
+- `start-collabora-online.sh` 一律關閉管理介面；`Dockerfile` 把映像內 `coolwsd.xml` 的 `net.post_allow` 收窄到 loopback，不開放 convert-to 等 REST 端點（刪除後檢查只剩 loopback，升版時格式改變會建置失敗；不以啟動參數依條目編號覆寫，因為 26.04 改了條目的格式與順序，照 25.04 的編號清除會漏掉 10/8、172.16/12）。`net.lok_allow` 在 26.04 預設為空清單，文件內的外部資料（`=WEBSERVICE()`、外部參照）只能連 WOPI host 與文件來源。建議反向代理另外封鎖 `<SERVICE_ROOT>/(cool|lool)/` 底下的 `convert-to`、`render-search-result`、`extract-link-targets`、`extract-document-structure`、`transform-document-structure`、`get-thumbnail`、`getMetrics`、`adminws`，因為 coolwsd 會放行 Host 是 WOPI host 的請求，而 Host 可以偽造。
 - 容器沒有 `CAP_SYS_ADMIN` 時，coolwsd 會記錄 `Bind-Mounting fails` 並改用複製檔案，功能正常，只是開檔稍慢。
 - 26.04 啟動時會記錄 `alias_groups: ignoring <host> [true] of group #1`：coolwsd 列舉群組內的 host 時，把 `start-collabora-online.sh` 設的 `host[@allow]=true` 屬性誤當成另一個 host；`WOPI_HOST` 仍以 allow=true 生效（上游 `wsd/HostUtil.cpp`），可以忽略。
 - 以數字 UID 1001 執行，相容 k8s Pod Security。WOPI proof key 由各容器啟動時自行產生。

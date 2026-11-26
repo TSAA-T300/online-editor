@@ -53,6 +53,15 @@ RUN sed -i -e 's|<prop oor:name="ooName"><value>Collabora Office</value>|<prop o
     sed -i -e 's|^ProductKey=Collabora Office |ProductKey=Online Editor |' /opt/lokit/program/bootstraprc && \
     ! grep -q '<value>Collabora' /opt/lokit/share/registry/main.xcd
 
+# 不讓文件伺服器替外部做事：post_allow 是可呼叫 convert-to 等 REST 端點的來源，預設含私有網段。
+# 經反向代理（nginx、k8s Ingress）或容器網路來的請求都是私有 IP，等於不用登入就能用；WOPI 編輯用不到這些端點，只留 loopback。
+# 在映像內的 coolwsd.xml 直接刪除，不以啟動參數依條目編號清除：條目的格式與順序隨版本改變（25.04 是正規式、26.04 是 CIDR），
+# 依編號清會清錯而不報錯。刪完檢查只剩 loopback，升版後格式變了建置會失敗。
+# lok_allow（文件內外部資料可連的主機）26.04 預設為空清單，只允許 WOPI host 與文件來源，不必處理
+RUN sed -i '/<post_allow /,/<\/post_allow>/{/<host /{/127\.0\.0\.1\/32\|::1\/128/!d}}' /etc/coolwsd/coolwsd.xml && \
+    [ "$(sed -n '/<post_allow /,/<\/post_allow>/p' /etc/coolwsd/coolwsd.xml | grep -o '<host [^>]*>[^<]*</host>' | sed 's/<[^>]*>//g' | sort | tr '\n' ' ')" = "127.0.0.1/32 ::1/128 " ] && \
+    [ -z "$(sed -n '/<lok_allow /,/<\/lok_allow>/p' /etc/coolwsd/coolwsd.xml | grep -v '^\s*<!--\|-->\s*$\|example' | grep -o '<host [^>]*>[^<]*</host>')" ]
+
 # 原本由套件的 postinstall 做的設定
 RUN chmod +x /start-collabora-online.sh && \
     setcap cap_fowner,cap_chown,cap_sys_chroot=ep /usr/bin/coolforkit-caps && \
